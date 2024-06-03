@@ -1,3 +1,4 @@
 streamlit
 assemblyai
 python-dotenv
+moviepy
