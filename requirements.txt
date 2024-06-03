@@ -2,3 +2,4 @@ streamlit
 assemblyai
 python-dotenv
 moviepy
+reportlab
