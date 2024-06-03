@@ -47,7 +47,7 @@ if uploaded_file is not None:
     if st.button("Confirm and Transcribe"):
         with st.spinner('Transcribing...'):
             headers = {
-                "authorization": api_key,
+                "authorization": API_KEY,
                 "content-type": "application/json"
             }
 
