@@ -8,9 +8,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 
 # Set AssemblyAI API key
-
-
-api_key=os.getenv(st.secrets["API_KEY"])
+api_key = st.secrets["API_KEY"]
 
 # Streamlit app
 st.title("Audio and Video Transcription System")
@@ -52,62 +50,58 @@ if uploaded_file is not None:
             }
 
             # Upload the file to AssemblyAI
-            # st.write("Uploading file to AssemblyAI...")
             upload_url = "https://api.assemblyai.com/v2/upload"
             with open(temp_file_path, "rb") as f:
                 response = requests.post(upload_url, headers=headers, files={"file": f})
 
-            audio_url = response.json()['upload_url']
-            # st.write(f"File uploaded to AssemblyAI at URL: {audio_url}")
-
-            # Request transcription
-            st.write("Starting transcription...")
-            transcription_url = "https://api.assemblyai.com/v2/transcript"
-            data = {
-                "audio_url": audio_url
-            }
-            response = requests.post(transcription_url, headers=headers, json=data)
-            transcript_id = response.json()['id']
-            # st.write(f"Transcription ID: {transcript_id}")
-
-            # Poll for transcription result
-            # st.write("Waiting for transcription to complete...")
-            while True:
-                transcript_result_url = f"https://api.assemblyai.com/v2/transcript/{transcript_id}"
-                response = requests.get(transcript_result_url, headers=headers)
-                status = response.json()['status']
-
-                if status == 'completed':
-                    transcript = response.json()
-                    break
-                elif status == 'failed':
-                    st.error("Transcription failed.")
-                    break
+            if response.status_code != 200:
+                st.error("Failed to upload file to AssemblyAI.")
+            else:
+                audio_url = response.json().get('upload_url')
+                if not audio_url:
+                    st.error("No upload URL returned from AssemblyAI.")
                 else:
-                    # st.write("Transcription in progress...")
-                    time.sleep(5)
+                    # Request transcription
+                    st.write("Starting transcription...")
+                    transcription_url = "https://api.assemblyai.com/v2/transcript"
+                    data = {
+                        "audio_url": audio_url
+                    }
+                    response = requests.post(transcription_url, headers=headers, json=data)
+                    if response.status_code != 200:
+                        st.error("Failed to request transcription from AssemblyAI.")
+                    else:
+                        transcript_id = response.json().get('id')
+                        if not transcript_id:
+                            st.error("No transcription ID returned from AssemblyAI.")
+                        else:
+                            # Poll for transcription result
+                            st.write("Waiting for transcription to complete...")
+                            while True:
+                                transcript_result_url = f"https://api.assemblyai.com/v2/transcript/{transcript_id}"
+                                response = requests.get(transcript_result_url, headers=headers)
+                                status = response.json().get('status')
 
-            if status == 'completed':
-                # st.write("Transcription completed successfully!")
-                # st.write("Transcription:")
-                st.write(transcript['text'])
+                                if status == 'completed':
+                                    transcript = response.json()
+                                    break
+                                elif status == 'failed':
+                                    st.error("Transcription failed.")
+                                    break
+                                else:
+                                    time.sleep(5)
 
-                text_file_path = os.path.join("temp", "transcript.txt")
-                with open(text_file_path, "w") as text_file:
-                    text_file.write(transcript['text'])
+                            if status == 'completed':
+                                st.write(transcript['text'])
 
-                with open(text_file_path, "rb") as text_file:
-                    st.download_button(
-                        label="Download Transcript as Text",
-                        data=text_file,
-                        file_name="transcript.txt",
-                        mime="text/plain"
-                    )
+                                text_file_path = os.path.join("temp", "transcript.txt")
+                                with open(text_file_path, "w") as text_file:
+                                    text_file.write(transcript['text'])
 
-             
-
-
-
-
-
-
+                                with open(text_file_path, "rb") as text_file:
+                                    st.download_button(
+                                        label="Download Transcript as Text",
+                                        data=text_file,
+                                        file_name="transcript.txt",
+                                        mime="text/plain"
+                                    )
